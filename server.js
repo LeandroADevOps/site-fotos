@@ -79,10 +79,28 @@ app.post('/upload', upload.single('foto'), async (req, res) => {
   }
 });
 
-// 5. Iniciar o servidor
+// 5. Rota para listar todas as fotos salvas no banco
+app.get('/fotos', async (req, res) => {
+  try {
+    // Busca todas as fotos ordenadas pela data de criação mais recente
+    const resultado = await pool.query('SELECT * FROM fotos ORDER BY id DESC');
+    
+    // Retorna a lista de fotos em formato JSON
+    res.json(resultado.rows);
+  } catch (err) {
+    console.error('Erro ao buscar fotos:', err);
+    res.status(500).send('Erro ao buscar fotos no banco de dados.');
+  }
+});
+
+// 6. Iniciar o servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando com sucesso na porta ${PORT}`);
 });
+
+
+
+
 
 
