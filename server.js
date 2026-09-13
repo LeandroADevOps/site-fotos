@@ -1,4 +1,5 @@
 
+
 const express = require('express');
 const multer = require('multer');
 const { Pool } = require('pg');
@@ -6,14 +7,40 @@ const path = require('path');
 
 const app = express();
 
-// 1. Conexão com o PostgreSQL
-const pool = new Pool({
-  user: 'postgres',          
-  host: 'localhost',
-  database: 'grownectacesso',   
-  password: '#21640Postgre', // <- COLOQUE SUA SENHA AQUI
-  port: 5432,
-});
+// 1. Conexão Inteligente com o PostgreSQL:
+// Se existir DATABASE_URL (Render na nuvem), conecta na Render com SSL.
+// Se NÃO existir (seu computador), conecta no seu banco local 'grownectacesso'.
+const pool = process.env.DATABASE_URL
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }
+    })
+  : new Pool({
+      user: 'postgres',
+      host: 'localhost',
+      database: 'grownectacesso',
+      password: '#21640Postgre',
+      port: 5432,
+    });
+
+// Cria a tabela 'fotos' automaticamente com a coluna 'url' se ela ainda não existir
+const criarTabela = async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS fotos (
+        id SERIAL PRIMARY KEY,
+        nome VARCHAR(255) NOT NULL,
+        url VARCHAR(255) NOT NULL,
+        data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('Tabela fotos verificada/criada com sucesso!');
+  } catch (err) {
+    console.error('Erro ao criar/verificar tabela:', err);
+  }
+};
+
+criarTabela();
 
 // 2. Servir arquivos da pasta
 app.use(express.static(__dirname));
@@ -49,7 +76,8 @@ app.post('/upload', upload.single('foto'), async (req, res) => {
   }
 });
 
-// 5. Iniciar o servidor
-app.listen(3000, () => {
-  console.log('Servidor rodando com sucesso! Acesse: http://localhost:3000');
+// 5. Iniciar o servidor (Porta dinâmica da Render ou 3000 local)
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor rodando com sucesso na porta ${PORT}`);
 });
